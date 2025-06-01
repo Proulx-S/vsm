@@ -22,7 +22,9 @@ info.indexFile = fullfile(workDir,[info.dataSetLabel '_indexFile.mat']);
 rCond = {};
 subList = p.meta.subjList;
 acqList = {'bold'};  % HRdelay uses BOLD data
-taskList = {'grat1' 'grat2' 'plaid'};  % HRdelay has 3 stimulus conditions
+taskList = {'vglnc'};  % HRdelay has 3 stimulus conditions
+condList = {'grat1' 'grat2' 'plaid'};  % HRdelay has 3 stimulus conditions
+conditionMap = [1 2 3]; % HRdelay condition IDs that map to grat1, grat2, plaid
 
 % Load and convert each subject's data
 for S = 1:length(subList)
@@ -30,44 +32,87 @@ for S = 1:length(subList)
     disp(['Converting subject ' subj ' (' num2str(S) '/' num2str(length(subList)) ')...'])
     
     % Load HRdelay timeseries data
-    hrData = load(fullfile(p.dataPath.V1,'ts',[subj '.mat']));
+    hrDataFile = fullfile(p.dataPath.V1,'ts',[subj '.mat']);
+    hrData = load(hrDataFile);
     
     % Initialize subject structure
-    rCond{S,1} = struct();
+    rCond{S,1} = runCond();
+    rCond{S}.sub  = subj;
+    rCond{S}.acq  = acqList{1};
+
+    % Collect data from all sessions and runs
+    allOnsets = [];
+    allDurations = [];
+    allConditions = [];
+    allDesigns = {}; % Store design for each run
     
-    % For each acquisition type (only BOLD in HRdelay)
-    acq = acqList{1};
-    rCond{S}.(acq) = struct();
+    for ses = 1:length(hrData.d.fun)
+        disp(['  Processing session ' num2str(ses) '/' num2str(length(hrData.d.fun))])
+        
+        % Get data for this session
+        sessionData = hrData.d.fun(ses);
+        nRuns = length(sessionData.data);
+        validRuns = ~sessionData.excl; % Non-excluded runs
+        nValidRuns = sum(validRuns);
+        
+        % Add session and task info for valid runs
+        rCond{S}.ses  = cat(1, rCond{S}.ses,  repmat(ses, nValidRuns, 1));
+        rCond{S}.task = cat(1, rCond{S}.task, repmat(taskList(1), nValidRuns, 1)); % All runs have same task
+        rCond{S}.cond = cat(1, rCond{S}.cond, condList(sessionData.condLabel(validRuns))');
+        
+        % Add other run properties for valid runs
+        rCond{S}.tr     = cat(1, rCond{S}.tr    , repmat(hrData.p.tr, nValidRuns, 1)                   );
+        rCond{S}.nFrame = cat(1, rCond{S}.nFrame, cellfun(@(x) size(x, 4), sessionData.data(validRuns))); % Each run has 120 timepoints
+        
+        % Process each valid run for design matrix
+        validRunIndices = find(validRuns);
+        for runIdx = 1:length(validRunIndices)
+            run = validRunIndices(runIdx);
+            
+            % Get condition for this run
+            conditionId = sessionData.condLabel(run);
+            
+            % Extract stimulus onset times from design matrix
+            design = sessionData.design{run}; % [time x 1] binary
+            stimOnsets = find(design == 1); % Frame indices where stimulus starts
+            stimOnsets_sec = (stimOnsets - 1) * hrData.p.tr; % Convert to seconds (0-indexed)
+            
+            % Create design structure for this specific run
+            runDsgn_obj = runDsgn();
+            runDsgn_obj.task = taskList{1}; % Same task for all runs (vglnc)
+            runDsgn_obj.onsetList = stimOnsets_sec; % Onset times for this run
+            runDsgn_obj.ondurList = repmat(hrData.p.stimDur, length(stimOnsets), 1); % Durations for this run
+            runDsgn_obj.dt = hrData.p.tr; % Time resolution
+            runDsgn_obj.cond = ones(length(stimOnsets), 1); % All stimuli in this run are the same condition
+            runDsgn_obj.condLabel = {condList{conditionId}}; % Specific condition label for this run (grat1/grat2/plaid)
+            runDsgn_obj.condK = 1; % One condition per run
+            runDsgn_obj.nReg = 1; % One regressor per run
+            
+            allDesigns{end+1} = runDsgn_obj;
+            
+            % Add to combined lists for summary
+            allOnsets = [allOnsets; stimOnsets_sec];
+            allDurations = [allDurations; repmat(hrData.p.stimDur, length(stimOnsets), 1)];
+            allConditions = [allConditions; repmat(conditionId, length(stimOnsets), 1)];
+        end
+    end
     
-    % For each task condition
-    for T = 1:length(taskList)
-        task = ['task_' taskList{T}];
-        
-        % Create runCond-like structure for this task
-        rCond{S}.(acq).(task) = struct();
-        rCond{S}.(acq).(task).sub = subj;
-        rCond{S}.(acq).(task).ses = '1';  % HRdelay has single session per subject
-        rCond{S}.(acq).(task).acq = acq;
-        rCond{S}.(acq).(task).task = task;
-        
-        % Extract timeseries for this condition
-        % HRdelay data structure: hrData.d.fun(sessInd).data contains the timeseries
-        % We'll need to extract condition-specific data
-        
-        % For now, store reference to original data - will need to implement
-        % proper conversion based on HRdelay's data organization
-        rCond{S}.(acq).(task).hrData = hrData;
-        
-        % Create basic design structure
-        dsgn = struct();
-        dsgn.task = task;
-        dsgn.condLabel = {taskList{T}};
-        rCond{S}.(acq).(task).dsgn = dsgn;
-        
-        % Placeholder for other required fields
-        rCond{S}.(acq).(task).fList = {};
-        rCond{S}.(acq).(task).tr = [];
-        rCond{S}.(acq).(task).date = [];
+    % Set up file lists (empty as requested)
+    nTotalRuns = length(rCond{S}.ses);
+    
+    % Store run-specific designs
+    rCond{S}.dsgn = allDesigns'; % Cell array of runDsgn objects, one per run
+    
+    % Display summary
+    disp(['    Total runs: ' num2str(nTotalRuns)])
+    disp(['    Total stimuli: ' num2str(length(allOnsets))])
+    disp(['    Task: ' taskList{1}])
+    disp(['    Conditions: ' strjoin(condList, ', ')])
+    
+    % Count stimuli per condition
+    for c = 1:length(condList)
+        nStim = sum(allConditions == c);
+        disp(['      ' condList{c} ': ' num2str(nStim) ' stimuli'])
     end
 end
 
@@ -75,6 +120,7 @@ end
 info.subList = subList;
 info.acqList = acqList;
 info.taskList = taskList;
+info.condList = condList;
 
 % Create placeholder QA structure
 QA = struct();
@@ -82,7 +128,8 @@ QA = struct();
 disp('Data conversion completed!')
 disp(['Subjects: ' num2str(length(subList))])
 disp(['Acquisition types: ' strjoin(acqList, ', ')])
-disp(['Task conditions: ' strjoin(taskList, ', ')])
+disp(['Task: ' taskList{1}])
+disp(['Conditions: ' strjoin(condList, ', ')])
 
 % Save converted data
 disp('Saving converted data structure...')
