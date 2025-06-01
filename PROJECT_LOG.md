@@ -1,12 +1,46 @@
 # VSM HRdelay Project Log
 
 ## Project Overview
-Converting HRdelay neuroimaging data format to vsmCenSur data structure format.
+Converting HRdelay neuroimaging data format to vsmCenSur data structure format for 6 subjects (02jp, 03sk, 04sp, 05bm, 06sb, 07bj) with 3 stimulus conditions (grat1, grat2, plaid).
 
-**Subjects**: 02jp, 03sk, 04sp, 05bm, 06sb, 07bj (6 total)
-**Task**: vglnc (visual vigilance)
-**Conditions**: grat1, grat2, plaid (3 stimulus conditions)
-**Data Type**: BOLD fMRI
+## Progress Summary
+
+### ✅ Code Development (Completed)
+- **Main Script**: `doIt_vsmHRdelay.m` - orchestrates the full conversion pipeline
+- **Download Function**: `downloadHRdelayData.m` - downloads HRdelay data from Zenodo
+- **Conversion Function**: `convertHRdelayToVsmCenSur.m` - converts to vsmCenSur format using proper runCond/runDsgn classes
+
+### ✅ Data Structure Implementation (Completed)
+- Each subject: single runCond object (not nested under acquisition)
+- Arrays for: ses, task, cond, tr, nFrame
+- Task separation: taskList = {'vglnc'}, condList = {'grat1' 'grat2' 'plaid'}
+- Design (dsgn): cell array of runDsgn objects, one per run
+- Proper stimulus timing extracted from HRdelay design matrices
+
+### ✅ Data Download (Completed)
+- Successfully downloaded all HRdelay data from Zenodo
+- 6 subjects × 2 sessions each with ~33 total runs
+- Data validated and ready for conversion
+
+### ✅ Repository Tracking (Completed)
+- **vasomoTools**: Created vsmHRdelay-project branch and committed modification (added 'cond' property to runCond class)
+- **Other tool repos**: No project branches created since no changes were made
+- **Policy**: Only create project branches for repositories that have actual modifications
+
+### 🔄 Next Steps
+1. Test/validate the data conversion pipeline
+2. Verify converted data structure compatibility with vsmCenSur analysis tools
+3. Document any issues or refinements needed
+
+## Technical Details
+- HRdelay data: 2 sessions/subject, 120 timepoints/run, TR=1s, stimulus duration=6s
+- Data excludes certain runs as specified in original HRdelay dataset
+- Timing converted from binary onsets to seconds for runDsgn compatibility
+
+## Repository Status
+- Main project: All changes committed to VSM repo
+- vasomoTools: Project branch vsmHRdelay-project created and pushed to GitHub
+- Other tool repos: No changes made, no project branches needed
 
 ## Current Status
 - ✅ Environment setup completed (MATLAB + neuroimaging tools)

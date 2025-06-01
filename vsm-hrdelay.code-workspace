@@ -1,0 +1,40 @@
+{
+    "folders": [
+        {
+            "name": "VSM (main)",
+            "path": "."
+        },
+        {
+            "name": "vasomoTools",
+            "path": "./doIt_vsmHRdelay/tools/vasomoTools"
+        },
+        {
+            "name": "generalPreproc",
+            "path": "./doIt_vsmHRdelay/tools/generalPreproc"
+        },
+        {
+            "name": "util",
+            "path": "./doIt_vsmHRdelay/tools/util"
+        },
+        {
+            "name": "bassReg2",
+            "path": "./doIt_vsmHRdelay/tools/bassReg2"
+        },
+        {
+            "name": "chronux",
+            "path": "./doIt_vsmHRdelay/tools/chronux"
+        },
+        {
+            "name": "fieldtrip",
+            "path": "./doIt_vsmHRdelay/tools/fieldtrip"
+        },
+        {
+            "name": "multigradient",
+            "path": "./doIt_vsmHRdelay/tools/multigradient"
+        }
+    ],
+    "settings": {
+        "git.detectSubmodules": true,
+        "git.autoRepositoryDetection": true
+    }
+} 
