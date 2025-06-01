@@ -1,0 +1,40 @@
+# VSM HRdelay Project - Ignore data and tool directories
+
+# Ignore all subdirectories (data, tools, etc.)
+doIt_vsmHRdelay/
+HRdelay/
+vsmCenSur/
+
+# But track important project files
+!*.m
+!*.md
+!*.txt
+!*.workspace
+
+# MATLAB specific
+*.asv
+*.m~
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*~
+
+# Log files
+*.log
+
+# MATLAB data files (these can be large)
+*.mat
+
+# Compiled files
+*.mex*
+*.p
+
+# Cache directories
+cache/
+temp/
+tmp/ 
